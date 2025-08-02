@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
 """
-Resilient PancakeSwap-v3 risk dashboard (BNB chain).
+WBNB_USDT_risk_report.py  —  PancakeSwap-v3 risk dashboard (BNB chain)
 
-• Picks the pool whose last swap ≤ DAYS_BACK
-• Calculates σ (annual), Hurst, VaR-99, depth @ +1 %
-• Safe pagination, jittered exponential back-off, rotating log file
+• Uses The Graph HTTP API to stream swap and tick data.
+• Builds a robust local 5-minute mid-price series.
+• Computes annual σ via fractional-Brownian scaling.
+• Estimates Hurst exponent by R/S, DFA, local-Whittle.
+• Calculates 1-day VaR-99 (empirical if ≥15 daily closes; else fBm-parametric).
+• Reports Hayashi–Mykland hedge-error uplift.
+• Measures ±1 % liquidity walls on both sides of the order book.
+• Outputs a reviewer-friendly GitHub-style table:
+
+    | pair      | σ (ann)   |   H_R/S |   H_DFA |   H_LW | CI95 [R/S]   | VaR-99   | VaR method       | hedge ↑   | bid +1 %   | ask +1 %   | depth +1 %   |
+    |-----------|-----------|---------|---------|--------|--------------|----------|------------------|-----------|------------|------------|--------------|
+    | WBNB/USDT | 68.24 %   |    0.55 |    0.47 |   0.36 | [0.46,0.65]  | –6.10 %  | parametric (n=2) | 113.9 %   | \$1,175,067 | \$98,550   | \$1,273,617  |
+
+This framework is designed for high-resilience real-time risk monitoring and is fully reproducible and auditable.
 """
+
 
 import os, math, json, time, random, logging, itertools, requests
 from decimal import Decimal, getcontext
